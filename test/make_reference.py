@@ -29,7 +29,12 @@ cases = {
         "b": rng.normal(size=(CHAINS, DRAWS)),
     },
     "skewed": {"a": rng.lognormal(0, 1, size=(CHAINS, DRAWS)), "b": rng.gamma(2, size=(CHAINS, DRAWS))},
-    "constant": {"a": rng.normal(size=(CHAINS, DRAWS)), "b": np.full((CHAINS, DRAWS), 1.5)},
+    # b is constant; c spans less than 256 float steps, which np.histogram cannot bin.
+    "degenerate": {
+        "a": rng.normal(size=(CHAINS, DRAWS)),
+        "b": np.full((CHAINS, DRAWS), 1.5),
+        "c": 1e8 + rng.integers(0, 2, size=(CHAINS, DRAWS)) * 1e-6,
+    },
 }
 
 out = {}
