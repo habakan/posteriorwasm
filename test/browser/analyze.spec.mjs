@@ -17,6 +17,7 @@ test("matches arviz_stats.summary on every reference case", async ({ page }) => 
     const rows = result.cases[name].summary;
     for (const [col, key] of Object.entries(COLUMNS)) {
       c.summary[col].forEach((want, k) => {
+        if (want === null) return expect(rows[k][key], `${name} ${c.names[k]} ${col}`).toBeNaN();
         // Pyodide's numpy/scipy are not the ones the reference ran on; FFT-based ESS drifts in the last bits.
         expect(Math.abs(rows[k][key] - want), `${name} ${c.names[k]} ${col}`).toBeLessThanOrEqual(1e-9 * Math.max(1, Math.abs(want)));
       });

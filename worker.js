@@ -11,7 +11,12 @@ def analyze(buf, n_chains, n_draws, n_vars, ci_kind, ci_prob, grid_len, ecdf_poi
     flat = x.reshape(n_vars, -1)
     ax = dict(chain_axis=-2, draw_axis=-1)
     ci = (a.hdi if ci_kind == "hdi" else a.eti)(flat, ci_prob)
-    grid, pdf, _ = a.kde(flat, grid_len=grid_len)
+    # kde rejects the whole batch if one row is constant or non-finite; those rows get NaN.
+    ok = np.isfinite(flat).all(-1) & (np.ptp(flat, -1) > 0)
+    grid = np.full((n_vars, grid_len), np.nan)
+    pdf = grid.copy()
+    if ok.any():
+        grid[ok], pdf[ok], _ = a.kde(flat[ok], grid_len=grid_len)
     # The fractional-rank delta-ECDF arviz_plots.plot_rank draws.
     ex, ey = a.ecdf(a.compute_ranks(flat).reshape(x.shape), npoints=ecdf_points, pit=True)
     col = lambda v: np.asarray(v, dtype=float).tolist()
