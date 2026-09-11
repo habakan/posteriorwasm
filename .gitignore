@@ -1,0 +1,16 @@
+node_modules
+test-results
+playwright-report
+
+# maintainer-only planning notes; kept on disk, never published
+/docs/internal/
+
+# agent instructions — personal setup, not part of the project
+/AGENTS.md
+/CLAUDE.md
+
+# editor
+.idea
+.vscode
+*.swp
+.DS_Store

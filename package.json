@@ -1,0 +1,32 @@
+{
+  "name": "posteriorwasm",
+  "version": "0.1.0",
+  "description": "ArviZ diagnostics and plots for MCMC draws in the browser: arviz-stats on Pyodide in a Web Worker, drawn as SVG.",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": ["index.js", "index.d.ts", "svg.js", "worker.js", "LICENSE-APACHE", "LICENSE-MIT", "README.md"],
+  "scripts": {
+    "test": "node --test test/svg.test.mjs",
+    "test:browser": "playwright test -c test/browser",
+    "serve": "node test/browser/serve.mjs",
+    "reference": "uv run --python 3.12 --with 'arviz-stats[xarray]==1.3.2' --with arviz-base test/make_reference.py"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/habakan/posteriorwasm.git"
+  },
+  "homepage": "https://github.com/habakan/posteriorwasm#readme",
+  "keywords": ["arviz", "mcmc", "bayesian", "diagnostics", "pyodide", "webassembly", "wasm"],
+  "license": "MIT OR Apache-2.0"
+}
