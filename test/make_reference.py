@@ -29,6 +29,7 @@ cases = {
         "b": rng.normal(size=(CHAINS, DRAWS)),
     },
     "skewed": {"a": rng.lognormal(0, 1, size=(CHAINS, DRAWS)), "b": rng.gamma(2, size=(CHAINS, DRAWS))},
+    "constant": {"a": rng.normal(size=(CHAINS, DRAWS)), "b": np.full((CHAINS, DRAWS), 1.5)},
 }
 
 out = {}
@@ -39,7 +40,9 @@ for name, post in cases.items():
     names = list(post)
     # Row-major per chain, one column per variable: the layout a sampler hands back.
     chains = [np.stack([post[k][c] for k in names], axis=-1).ravel().tolist() for c in range(CHAINS)]
-    out[name] = {"names": names, "chains": chains, "summary": {col: s[col].tolist() for col in s.columns}}
+    # JSON has no NaN; null stands for it.
+    cols = {col: [None if np.isnan(v) else v for v in s[col].astype(float)] for col in s.columns}
+    out[name] = {"names": names, "chains": chains, "summary": cols}
 
 path = Path(__file__).parent / "fixtures" / "reference.json"
 path.parent.mkdir(exist_ok=True)
