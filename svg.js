@@ -134,3 +134,20 @@ export function summaryTable(result, { digits = 3 } = {}) {
   }).join("");
   return `<table class="posteriorwasm-summary"><thead><tr>${head.map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
 }
+
+// elpd_loo with its standard error, and how many observations PSIS could not
+// smooth. A Pareto k above `goodK` is the one number that says the estimate
+// itself is unreliable, so it is flagged rather than merely reported.
+export function looTable(result, { digits = 2 } = {}) {
+  const bad = result.aboveGoodK > 0;
+  const kMax = result.paretoK.reduce((m, k) => (k > m ? k : m), -Infinity);
+  const row = (label, value, flag = false) =>
+    `<tr><th scope="row">${esc(label)}</th><td${flag ? ` data-flag style="color:${FLAG};font-weight:600"` : ""}>${value}</td></tr>`;
+  return `<table class="posteriorwasm-loo"><tbody>` +
+    row("elpd_loo", `${fmt(result.elpd, digits)} ± ${fmt(result.se, digits)}`) +
+    row("p_loo", fmt(result.pLoo, digits)) +
+    row("n_obs", String(result.nObs)) +
+    row("max pareto_k", fmt(kMax, 3), bad) +
+    row(`pareto_k > ${fmt(result.goodK, 2)}`, String(result.aboveGoodK), bad) +
+    `</tbody></table>`;
+}

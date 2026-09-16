@@ -6,7 +6,7 @@
 <script type="module">
 // Runs every reference case through the worker and leaves the numbers on window
 // for the spec; the stuck chain's plots are drawn for a person to look at.
-import { createAnalyzer, summaryTable, forestPlot, densityPlot, rankPlot, tracePlot } from "/index.js";
+import { createAnalyzer, summaryTable, looTable, forestPlot, densityPlot, rankPlot, tracePlot } from "/index.js";
 
 const status = (s) => { document.getElementById("status").textContent = s; };
 try {
@@ -17,14 +17,23 @@ try {
   const bootMs = performance.now() - t0;
   const cases = {};
   let shown;
+  let loo;
   for (const [name, c] of Object.entries(reference)) {
     const t = performance.now();
-    const r = await analyzer.analyze({ names: c.names, chains: c.chains.map((d) => new Float64Array(d)) });
+    const chains = c.chains.map((d) => new Float64Array(d));
+    const r = await analyzer.analyze({ names: c.names, chains });
     cases[name] = { summary: r.summary, ms: performance.now() - t };
     if (name === "stuck_chain") shown = r;
+    if (c.logLikelihood) {
+      loo = await analyzer.loo({
+        names: c.names, chains,
+        logLikelihood: c.logLikelihood.map((d) => new Float64Array(d)),
+      });
+      cases[name].loo = loo;
+    }
   }
   const out = document.getElementById("out");
-  out.innerHTML = summaryTable(shown) + forestPlot(shown) +
+  out.innerHTML = summaryTable(shown) + (loo ? looTable(loo) : "") + forestPlot(shown) +
     shown.names.map((_, k) => `<div>${densityPlot(shown, k)}${rankPlot(shown, k)}${tracePlot(shown, k)}</div>`).join("");
   status("done");
   window.result = { ok: true, versions, bootMs, cases };

@@ -64,9 +64,31 @@ export interface Versions {
   pyodide: string;
 }
 
+export interface LooInput {
+  names: string[];
+  chains: Float64Array[];
+  /** One entry per posterior chain, `nDraws * nObs` long, row-major per draw. */
+  logLikelihood: Float64Array[];
+}
+
+export interface LooResult {
+  nObs: number;
+  elpd: number;
+  se: number;
+  pLoo: number;
+  lppd: number;
+  /** Pareto k above this means importance sampling did not converge. */
+  goodK: number;
+  rEff: number;
+  paretoK: number[];
+  elpdI: number[];
+  aboveGoodK: number;
+}
+
 export interface Analyzer {
   ready: Promise<Versions>;
   analyze(input: AnalyzeInput, options?: AnalyzeOptions): Promise<AnalyzeResult>;
+  loo(input: LooInput): Promise<LooResult>;
   terminate(): void;
 }
 
@@ -84,3 +106,4 @@ export function rankPlot(result: AnalyzeResult, k: number, size?: PlotSize): str
 export function tracePlot(result: AnalyzeResult, k: number, size?: PlotSize): string;
 export function forestPlot(result: AnalyzeResult, options?: { width?: number; rowHeight?: number; labelWidth?: number }): string;
 export function summaryTable(result: AnalyzeResult, options?: { digits?: number }): string;
+export function looTable(result: LooResult, options?: { digits?: number }): string;
