@@ -25,4 +25,17 @@ test("matches arviz_stats.summary on every reference case", async ({ page }) => 
   }
   await expect(page.locator("table.posteriorwasm-summary td[data-flag]").first()).toBeVisible();
   expect(await page.locator("#out svg").count()).toBe(7);
+
+  // The same tolerance: PSIS is a sort and a fit, so it drifts with numpy too.
+  const [name, c] = Object.entries(reference).find(([, v]) => v.loo);
+  const got = result.cases[name].loo;
+  for (const [key, want] of [["elpd", c.loo.elpd], ["se", c.loo.se], ["pLoo", c.loo.pLoo]]) {
+    expect(Math.abs(got[key] - want), `loo ${key}`).toBeLessThanOrEqual(1e-9 * Math.max(1, Math.abs(want)));
+  }
+  c.loo.paretoK.forEach((want, i) => {
+    expect(Math.abs(got.paretoK[i] - want), `pareto_k[${i}]`).toBeLessThanOrEqual(1e-9 * Math.max(1, Math.abs(want)));
+  });
+  expect(got.nObs).toBe(c.loo.paretoK.length);
+  expect(got.aboveGoodK).toBe(c.loo.paretoK.filter((k) => k > got.goodK).length);
+  await expect(page.locator("table.posteriorwasm-loo td[data-flag]").first()).toBeVisible();
 });

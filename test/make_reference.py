@@ -37,6 +37,26 @@ cases = {
     },
 }
 
+# A small regression whose pointwise log-likelihood LOO can be taken of. The
+# draws are drawn around the truth rather than fitted, so `p_loo` is larger than
+# the two parameters would give — what matters here is agreeing with ArviZ, and
+# the outlier at `y[7]` puts one Pareto k above the threshold to agree about.
+def loo_case():
+    n_obs = 40
+    x = rng.normal(size=n_obs)
+    y = 0.7 * x + rng.normal(scale=0.3, size=n_obs)
+    y[7] += 2.5
+    post = {
+        "beta": 0.7 + rng.normal(scale=0.05, size=(CHAINS, DRAWS)),
+        "sigma": 0.3 + rng.gamma(2, 0.02, size=(CHAINS, DRAWS)),
+    }
+    b = post["beta"][..., None]
+    sd = post["sigma"][..., None]
+    resid = y[None, None, :] - b * x[None, None, :]
+    ll = -0.5 * (resid / sd) ** 2 - np.log(sd) - 0.5 * np.log(2 * np.pi)
+    return post, ll
+
+
 out = {}
 for name, post in cases.items():
     # Rounded first so the JSON holds exactly the values the reference saw.
@@ -48,6 +68,25 @@ for name, post in cases.items():
     # JSON has no NaN; null stands for it.
     cols = {col: [None if np.isnan(v) else v for v in s[col].astype(float)] for col in s.columns}
     out[name] = {"names": names, "chains": chains, "summary": cols}
+
+post, ll = loo_case()
+post = {k: np.round(v, 6) for k, v in post.items()}
+ll = np.round(ll, 6)
+idata = from_dict({"posterior": post, "log_likelihood": {"y": ll}})
+res = arviz_stats.loo(idata, pointwise=True)
+names = list(post)
+s_loo = arviz_stats.summary(idata, round_to="none")
+out["loo"] = {
+    "names": names,
+    "chains": [np.stack([post[k][c] for k in names], axis=-1).ravel().tolist() for c in range(CHAINS)],
+    "summary": {c: [None if np.isnan(v) else v for v in s_loo[c].astype(float)] for c in s_loo.columns},
+    # Row-major per chain, one column per observation — the layout `generatedQuantities` hands back.
+    "logLikelihood": [ll[c].ravel().tolist() for c in range(CHAINS)],
+    "loo": {
+        "elpd": float(res.elpd), "se": float(res.se), "pLoo": float(res.p),
+        "paretoK": [float(v) for v in np.asarray(res.pareto_k).ravel()],
+    },
+}
 
 path = Path(__file__).parent / "fixtures" / "reference.json"
 path.parent.mkdir(exist_ok=True)

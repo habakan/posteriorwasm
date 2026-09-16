@@ -31,11 +31,31 @@ the HDI), bulk and tail ESS, rank-normalized R-hat, and the MCSE of the mean and
 the sd. Also a KDE, the fractional-rank Δ-ECDF `plot_rank` draws, and a thinned
 trace per chain.
 
+## Cross-validation
+
+`analyzer.loo` takes a pointwise log-likelihood beside the draws and returns
+PSIS-LOO: `elpd` with its standard error, `pLoo`, and a Pareto k per
+observation. `aboveGoodK` counts the observations whose k passed the threshold
+ArviZ warns at, which is what says the estimate itself is unreliable.
+
+```js
+const loo = await analyzer.loo({
+  names, chains,
+  // one entry per chain, nDraws * nObs long, row-major per draw
+  logLikelihood: [ll0, ll1, ll2, ll3],
+});
+document.querySelector("#loo").innerHTML = looTable(loo);
+```
+
+A Stan model supplies this by writing `log_lik` into `generated quantities`.
+`r_eff` comes from the posterior's mean ESS, the way `arviz_stats.loo` takes it,
+which is why the draws are passed too.
+
 ## Plots
 
 Each returns an SVG string: `densityPlot`, `rankPlot`, `tracePlot` take the
-result and a variable index; `forestPlot` and `summaryTable` (HTML) take the
-result. Set `innerHTML` in plain JS, or `dangerouslySetInnerHTML` in React.
+result and a variable index; `forestPlot`, `summaryTable` and `looTable` (both
+HTML) take the result. Set `innerHTML` in plain JS, or `dangerouslySetInnerHTML` in React.
 Cells ArviZ would warn about — R-hat of 1.01 or more, fewer than 100 effective
 draws per chain — carry a `data-flag` attribute.
 

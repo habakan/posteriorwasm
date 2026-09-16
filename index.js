@@ -63,7 +63,35 @@ export function createAnalyzer({ indexURL = PYODIDE_URL, arvizStats = ARVIZ_STAT
     };
   }
 
-  return { ready, analyze, terminate: () => worker.terminate() };
+  // PSIS-LOO over a pointwise log-likelihood. Separate from `analyze` because a
+  // page only has one if its model wrote `log_lik` into generated quantities.
+  async function loo({ names, chains, logLikelihood }) {
+    const nVars = names.length;
+    const nChains = chains.length;
+    const nDraws = chains[0].length / nVars;
+    const nObs = logLikelihood[0].length / nDraws;
+    if (logLikelihood.length !== nChains || !Number.isInteger(nObs)
+        || logLikelihood.some((c) => c.length !== logLikelihood[0].length)) {
+      throw new Error("logLikelihood needs one chain per posterior chain, nDraws * nObs wide");
+    }
+    const draws = new Float64Array(nChains * nDraws * nVars);
+    chains.forEach((c, i) => draws.set(c, i * nDraws * nVars));
+    const logLik = new Float64Array(nChains * nDraws * nObs);
+    logLikelihood.forEach((c, i) => logLik.set(c, i * nDraws * nObs));
+
+    const r = await call(
+      { type: "loo", logLik, nChains, nDraws, nObs, draws, nVars },
+      [logLik.buffer, draws.buffer],
+    );
+    return {
+      nObs, elpd: r.elpd, se: r.se, pLoo: r.p_loo, lppd: r.lppd,
+      goodK: r.good_k, rEff: r.r_eff,
+      paretoK: r.pareto_k, elpdI: r.elpd_i,
+      aboveGoodK: r.pareto_k.reduce((n, k) => n + (k > r.good_k ? 1 : 0), 0),
+    };
+  }
+
+  return { ready, analyze, loo, terminate: () => worker.terminate() };
 }
 
 function thinnedTraces(draws, nChains, nDraws, nVars) {
